@@ -2,7 +2,7 @@
 
 在 Mission Control 拖曳全螢幕 Space 不小心合併成 Split View 時，自動拆回兩個獨立的全螢幕 Space。
 
-> PoC 階段，目標 macOS 26 / 27（測試目標：27.0.1 (26A434)）。
+> PoC 階段。目前只在 macOS 26.6.2（25G83）上測試過。
 
 ## 原理
 
@@ -67,5 +67,5 @@ open build/SplitPreventer.app
 
 - private API 可能隨 macOS 更新失效。
 - 視窗若位於非當前 Space，AX 可能拿不到它；程式會每 2 秒重試，切到該 Space 通常就能處理。
-- Dock 的 Mission Control 通知在 27 上若沒觸發，會在 Mission Control 開著時就動作（看 log 裡有沒有 `Mission Control: ...`）。
+- Dock 的 Mission Control 通知若沒觸發，會在 Mission Control 開著時就動作（看 log 裡有沒有 `Mission Control: ...`）。
 - 拆開時會有全螢幕動畫，Space 順序可能改變。
