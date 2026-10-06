@@ -34,7 +34,23 @@ swift build -c release
 
 另可開啟「輔助使用 → 顯示器 → 減少動態效果」讓切換動畫變成淡入淡出。
 
-首次執行需在「系統設定 → 隱私權與安全性 → 輔助使用」允許執行它的 terminal。
+首次執行需在「系統設定 → 隱私權與安全性 → 輔助使用」允許執行它的 terminal（或 app）。授權前程式會等待，授權後自動開始。
+
+### Menu bar
+
+執行時右上角會出現圖示，可切換 啟用 / Dry-run / 保持視窗、設定登入時啟動、打開 log、結束。圖示變暗表示暫停、dry-run 或尚未授權；拆開時會短暫變實心。
+
+Log 同時寫到 `~/Library/Logs/SplitPreventer.log`。
+
+### 打包成 .app
+
+```sh
+scripts/bundle.sh                                   # ad-hoc 簽章
+SIGN_IDENTITY="Apple Development: ..." scripts/bundle.sh  # 固定簽章
+open build/SplitPreventer.app
+```
+
+「登入時啟動」只在 .app 下可用。ad-hoc 簽章每次 build 都會變，輔助使用權限會失效，需移除後重新加入；用固定憑證簽可避免。
 
 ## 已知限制 / 待驗證
 

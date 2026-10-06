@@ -1,10 +1,22 @@
 import AppKit
 import ApplicationServices
 
+private let logFile: FileHandle? = {
+    let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/SplitPreventer.log")
+    if !FileManager.default.fileExists(atPath: url.path) {
+        FileManager.default.createFile(atPath: url.path, contents: nil)
+    }
+    let handle = try? FileHandle(forWritingTo: url)
+    handle?.seekToEndOfFile()
+    return handle
+}()
+
 func log(_ message: String) {
     let f = DateFormatter()
     f.dateFormat = "HH:mm:ss.SSS"
-    print("[\(f.string(from: Date()))] \(message)")
+    let line = "[\(f.string(from: Date()))] \(message)"
+    print(line)
+    logFile?.write(Data((line + "\n").utf8)) // stdout is lost when launched as .app
 }
 
 struct Options {
@@ -15,7 +27,9 @@ struct Options {
 
 /// Detects Split View spaces and breaks them back into separate fullscreen spaces.
 final class Preventer {
-    private let options: Options
+    var options: Options
+    var isEnabled = true
+    var onUnsplit: ((String) -> Void)?
     private let settleDelay: TimeInterval = 1.0   // split must persist this long before acting
     private let postExitDelay: TimeInterval = 0.6 // wait after Mission Control closes
     private let retryBackoff: TimeInterval = 2.0
@@ -37,10 +51,11 @@ final class Preventer {
             options.dryRun ? "dry-run" : "active",
             options.windowed ? "windowed" : nil,
         ].compactMap { $0 }.joined(separator: ", ")
-        log("running (\(mode), poll \(options.interval)s). Ctrl-C to quit.")
+        log("running (\(mode), poll \(options.interval)s).")
     }
 
     private func tick() {
+        guard isEnabled else { return }
         let splits = Spaces.splitSpaces()
         let ids = Set(splits.map(\.spaceID))
         firstSeen = firstSeen.filter { ids.contains($0.key) }
@@ -89,6 +104,7 @@ final class Preventer {
             backoff(space)
             return
         }
+        onUnsplit?(space.tiles.map(\.appName).joined(separator: " | "))
         if options.windowed {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.busy = false }
         } else {
@@ -144,11 +160,6 @@ if args.contains("--dump") {
     exit(0)
 }
 
-guard AX.ensureTrusted() else {
-    print("請到 系統設定 → 隱私權與安全性 → 輔助使用，允許目前的 terminal，再重新執行。")
-    exit(1)
-}
-
 var options = Options()
 options.dryRun = args.contains("--dry-run")
 options.windowed = args.contains("--windowed")
@@ -156,5 +167,22 @@ if let i = args.firstIndex(of: "--interval"), args.indices.contains(i + 1), let 
     options.interval = v
 }
 let preventer = Preventer(options: options)
-preventer.start()
-RunLoop.main.run()
+
+let app = NSApplication.shared
+app.setActivationPolicy(.accessory) // menu bar only, no Dock icon
+let menuBar = MenuBarController(preventer: preventer)
+
+if AX.ensureTrusted() {
+    preventer.start()
+} else {
+    print("請到 系統設定 → 隱私權與安全性 → 輔助使用，允許執行它的 app / terminal。")
+    menuBar.status = "等待輔助使用權限…"
+    // Start once permission is granted.
+    Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { timer in
+        guard AXIsProcessTrusted() else { return }
+        timer.invalidate()
+        menuBar.status = nil
+        preventer.start()
+    }
+}
+app.run()
