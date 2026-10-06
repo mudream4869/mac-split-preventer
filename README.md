@@ -12,7 +12,18 @@
 
 只讀取 private API，不需關閉 SIP。
 
-## 使用
+## 安裝
+
+```sh
+brew tap mudream4869/split-preventer https://github.com/mudream4869/mac-split-preventer
+brew install --cask split-preventer
+```
+
+裝好後 `/Applications/SplitPreventer.app` 與 CLI `split-preventer` 都可用。ad-hoc 簽章，每次 `brew upgrade` 後需在「輔助使用」移除再重新加入。
+
+發版：push `v*` tag（如 `v0.1.0`），GitHub Actions 會 build、建 Release，並更新 `Casks/split-preventer.rb`。
+
+## 從原始碼使用
 
 ```sh
 swift build -c release
@@ -45,8 +56,8 @@ Log 同時寫到 `~/Library/Logs/SplitPreventer.log`。
 ### 打包成 .app
 
 ```sh
-scripts/bundle.sh                                   # ad-hoc 簽章
-SIGN_IDENTITY="Apple Development: ..." scripts/bundle.sh  # 固定簽章
+VERSION=0.1.0 scripts/bundle.sh                     # ad-hoc 簽章，另產生 build/SplitPreventer-0.1.0.zip
+SIGN_IDENTITY="Apple Development: ..." scripts/bundle.sh # 固定簽章
 open build/SplitPreventer.app
 ```
 
