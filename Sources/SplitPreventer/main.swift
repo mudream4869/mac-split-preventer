@@ -8,10 +8,16 @@ func log(_ message: String) {
 }
 
 /// Detects Split View spaces and breaks them back into separate fullscreen spaces.
+struct Options {
+    var dryRun = false
+    var immediate = false // act even while Mission Control is open
+    var windowed = false  // don't re-enter fullscreen after popping out
+    var interval: TimeInterval = 0.5
+}
+
 final class Preventer {
-    private let dryRun: Bool
-    private let interval: TimeInterval
-    private let settleDelay: TimeInterval = 1.0   // split must persist this long before acting
+    private let options: Options
+    private let settleDelay: TimeInterval         // split must persist this long before acting
     private let postExitDelay: TimeInterval = 0.6 // wait after Mission Control closes
     private let retryBackoff: TimeInterval = 2.0
 
@@ -21,15 +27,20 @@ final class Preventer {
     private var busy = false
     private var timer: Timer?
 
-    init(dryRun: Bool, interval: TimeInterval) {
-        self.dryRun = dryRun
-        self.interval = interval
+    init(options: Options) {
+        self.options = options
+        settleDelay = options.immediate ? 0.3 : 1.0
     }
 
     func start() {
         missionControl.start()
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in self?.tick() }
-        log("running (\(dryRun ? "dry-run" : "active"), poll \(interval)s). Ctrl-C to quit.")
+        timer = Timer.scheduledTimer(withTimeInterval: options.interval, repeats: true) { [weak self] _ in self?.tick() }
+        let mode = [
+            options.dryRun ? "dry-run" : "active",
+            options.immediate ? "immediate" : nil,
+            options.windowed ? "windowed" : nil,
+        ].compactMap { $0 }.joined(separator: ", ")
+        log("running (\(mode), poll \(options.interval)s). Ctrl-C to quit.")
     }
 
     private func tick() {
@@ -45,12 +56,15 @@ final class Preventer {
             log("🔍 split view detected: space \(space.spaceID) [\(apps)]\(space.isCurrent ? " (current)" : "")")
         }
 
-        guard !busy, !missionControl.isActive,
-              now.timeIntervalSince(missionControl.lastExit) >= postExitDelay else { return }
+        guard !busy else { return }
+        if !options.immediate {
+            guard !missionControl.isActive,
+                  now.timeIntervalSince(missionControl.lastExit) >= postExitDelay else { return }
+        }
 
         guard let target = splits.first(where: { now.timeIntervalSince(firstSeen[$0.spaceID]!) >= settleDelay }) else { return }
 
-        if dryRun {
+        if options.dryRun {
             if reported.insert(target.spaceID).inserted {
                 log("dry-run: would unsplit space \(target.spaceID). raw:\n\(target.raw)")
             }
@@ -81,7 +95,11 @@ final class Preventer {
             backoff(space)
             return
         }
-        reenterFullScreen(window, name: "\(tile.appName)#\(tile.windowID)", delay: 1.0, attemptsLeft: 10)
+        if options.windowed {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.busy = false }
+        } else {
+            reenterFullScreen(window, name: "\(tile.appName)#\(tile.windowID)", delay: 1.0, attemptsLeft: 10)
+        }
     }
 
     private func reenterFullScreen(_ window: AXUIElement, name: String, delay: TimeInterval, attemptsLeft: Int) {
@@ -112,9 +130,11 @@ let args = CommandLine.arguments
 
 if args.contains("-h") || args.contains("--help") {
     print("""
-    usage: SplitPreventer [--dump] [--dry-run] [--interval <sec>]
+    usage: SplitPreventer [--dump] [--dry-run] [--immediate] [--windowed] [--interval <sec>]
       --dump       print API availability and all spaces, then exit
       --dry-run    only log detected split views
+      --immediate  unsplit while Mission Control is still open
+      --windowed   leave the popped-out window windowed (no re-fullscreen)
       --interval   poll interval in seconds (default 0.5)
     """)
     exit(0)
@@ -135,7 +155,13 @@ guard AX.ensureTrusted() else {
     exit(1)
 }
 
-let interval = args.firstIndex(of: "--interval").flatMap { args.indices.contains($0 + 1) ? Double(args[$0 + 1]) : nil } ?? 0.5
-let preventer = Preventer(dryRun: args.contains("--dry-run"), interval: interval)
+var options = Options()
+options.dryRun = args.contains("--dry-run")
+options.immediate = args.contains("--immediate")
+options.windowed = args.contains("--windowed")
+if let i = args.firstIndex(of: "--interval"), args.indices.contains(i + 1), let v = Double(args[i + 1]) {
+    options.interval = v
+}
+let preventer = Preventer(options: options)
 preventer.start()
 RunLoop.main.run()
