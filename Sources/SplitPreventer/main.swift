@@ -7,17 +7,16 @@ func log(_ message: String) {
     print("[\(f.string(from: Date()))] \(message)")
 }
 
-/// Detects Split View spaces and breaks them back into separate fullscreen spaces.
 struct Options {
     var dryRun = false
-    var immediate = false // act even while Mission Control is open
-    var windowed = false  // don't re-enter fullscreen after popping out
+    var windowed = false // don't re-enter fullscreen after popping out
     var interval: TimeInterval = 0.5
 }
 
+/// Detects Split View spaces and breaks them back into separate fullscreen spaces.
 final class Preventer {
     private let options: Options
-    private let settleDelay: TimeInterval         // split must persist this long before acting
+    private let settleDelay: TimeInterval = 1.0   // split must persist this long before acting
     private let postExitDelay: TimeInterval = 0.6 // wait after Mission Control closes
     private let retryBackoff: TimeInterval = 2.0
 
@@ -29,7 +28,6 @@ final class Preventer {
 
     init(options: Options) {
         self.options = options
-        settleDelay = options.immediate ? 0.3 : 1.0
     }
 
     func start() {
@@ -37,7 +35,6 @@ final class Preventer {
         timer = Timer.scheduledTimer(withTimeInterval: options.interval, repeats: true) { [weak self] _ in self?.tick() }
         let mode = [
             options.dryRun ? "dry-run" : "active",
-            options.immediate ? "immediate" : nil,
             options.windowed ? "windowed" : nil,
         ].compactMap { $0 }.joined(separator: ", ")
         log("running (\(mode), poll \(options.interval)s). Ctrl-C to quit.")
@@ -56,11 +53,8 @@ final class Preventer {
             log("🔍 split view detected: space \(space.spaceID) [\(apps)]\(space.isCurrent ? " (current)" : "")")
         }
 
-        guard !busy else { return }
-        if !options.immediate {
-            guard !missionControl.isActive,
-                  now.timeIntervalSince(missionControl.lastExit) >= postExitDelay else { return }
-        }
+        guard !busy, !missionControl.isActive,
+              now.timeIntervalSince(missionControl.lastExit) >= postExitDelay else { return }
 
         guard let target = splits.first(where: { now.timeIntervalSince(firstSeen[$0.spaceID]!) >= settleDelay }) else { return }
 
@@ -130,10 +124,9 @@ let args = CommandLine.arguments
 
 if args.contains("-h") || args.contains("--help") {
     print("""
-    usage: SplitPreventer [--dump] [--dry-run] [--immediate] [--windowed] [--interval <sec>]
+    usage: SplitPreventer [--dump] [--dry-run] [--windowed] [--interval <sec>]
       --dump       print API availability and all spaces, then exit
       --dry-run    only log detected split views
-      --immediate  unsplit while Mission Control is still open
       --windowed   leave the popped-out window windowed (no re-fullscreen)
       --interval   poll interval in seconds (default 0.5)
     """)
@@ -158,7 +151,6 @@ guard AX.ensureTrusted() else {
 
 var options = Options()
 options.dryRun = args.contains("--dry-run")
-options.immediate = args.contains("--immediate")
 options.windowed = args.contains("--windowed")
 if let i = args.firstIndex(of: "--interval"), args.indices.contains(i + 1), let v = Double(args[i + 1]) {
     options.interval = v

@@ -29,7 +29,6 @@ swift build -c release
 
 | Flag | 說明 |
 |---|---|
-| `--immediate` | 不等 Mission Control 關閉，直接在背後拆開 |
 | `--windowed` | 拆出的視窗保持一般視窗，不重新全螢幕（少一次動畫） |
 | `--interval <sec>` | 輪詢間隔，預設 0.5 |
 
