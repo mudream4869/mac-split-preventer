@@ -12,16 +12,15 @@ cask "split-preventer" do
     strategy :github_latest
   end
 
-  depends_on macos: ">= :ventura"
   depends_on arch: :arm64
+  depends_on macos: :ventura
 
   app "SplitPreventer.app"
   binary "#{appdir}/SplitPreventer.app/Contents/MacOS/SplitPreventer", target: "split-preventer"
 
   # Ad-hoc signed: drop quarantine so Gatekeeper doesn't block it.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/SplitPreventer.app"]
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/SplitPreventer.app"]
   end
 
   uninstall quit: "io.github.mudream4869.SplitPreventer"
