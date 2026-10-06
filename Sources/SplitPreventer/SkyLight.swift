@@ -1,5 +1,5 @@
+import AppKit
 import CoreGraphics
-import Foundation
 
 /// Read-only wrappers around private SkyLight space APIs (resolved via dlsym).
 enum SkyLight {
@@ -64,13 +64,13 @@ enum Spaces {
         guard let wid = uint64(dict["TileWindowID"] ?? dict["fs_wid"]) else { return nil }
         // pid may be a number or an array of numbers.
         let pidValue = (dict["pid"] as? [Any])?.first ?? dict["pid"]
+        let pid = (pidValue as? NSNumber).map { pid_t($0.int32Value) }
         let x = ((dict["TileRect"] as? [String: Any])?["X"] as? NSNumber)?.doubleValue ?? 0
-        return Tile(
-            windowID: CGWindowID(truncatingIfNeeded: wid),
-            pid: (pidValue as? NSNumber).map { pid_t($0.int32Value) },
-            appName: dict["appName"] as? String ?? "?",
-            x: x
-        )
+        // appName is absent on macOS 27; fall back to the running app's name.
+        let appName = dict["appName"] as? String
+            ?? pid.flatMap { NSRunningApplication(processIdentifier: $0)?.localizedName }
+            ?? "?"
+        return Tile(windowID: CGWindowID(truncatingIfNeeded: wid), pid: pid, appName: appName, x: x)
     }
 
     private static func uint64(_ value: Any?) -> UInt64? {
