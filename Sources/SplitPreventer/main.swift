@@ -135,7 +135,6 @@ if args.contains("-h") || args.contains("--help") {
 
 print("SkyLight space API: \(SkyLight.isAvailable ? "✅" : "❌")")
 print("_AXUIElementGetWindow: \(AX.hasGetWindow ? "✅" : "❌")")
-print("_AXUIElementCreateWithRemoteToken: \(AX.hasRemoteToken ? "✅" : "❌")")
 guard SkyLight.isAvailable, AX.hasGetWindow else { exit(1) }
 
 if args.contains("--dump") {
