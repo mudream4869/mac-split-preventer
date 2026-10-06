@@ -49,7 +49,7 @@ swift build -c release
 
 ### Menu bar
 
-執行時右上角會出現圖示，可切換 啟用 / Dry-run / 保持視窗、設定登入時啟動、打開 log、結束。圖示變暗表示暫停、dry-run 或尚未授權；拆開時會短暫變實心。
+執行時右上角會出現圖示，可切換 啟用 / Dry-run / 保持視窗、設定登入時啟動、打開 log、查看關於（版本）、結束。圖示變暗表示暫停、dry-run 或尚未授權；拆開時會短暫變實心。
 
 Log 同時寫到 `~/Library/Logs/SplitPreventer.log`。
 

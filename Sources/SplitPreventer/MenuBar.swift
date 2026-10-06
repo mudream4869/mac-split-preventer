@@ -45,6 +45,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(login)
         menu.addItem(withTitle: "打開 Log", action: #selector(openLog), keyEquivalent: "").target = self
         menu.addItem(.separator())
+        menu.addItem(withTitle: "關於 SplitPreventer", action: #selector(showAbout), keyEquivalent: "").target = self
         menu.addItem(withTitle: "結束", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     }
 
@@ -96,6 +97,20 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func openLog() {
         let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/SplitPreventer.log")
         NSWorkspace.shared.open(url)
+    }
+
+    // Menu bar app has no main window, so activate first or the panel stays behind.
+    @objc private func showAbout() {
+        let link = "https://github.com/mudream4869/mac-split-preventer"
+        let credits = NSAttributedString(string: link, attributes: [
+            .link: URL(string: link)!,
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+        ])
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationName: "SplitPreventer",
+            .credits: credits,
+        ])
     }
 
     // Dimmed when paused, dry-run or not yet running.
