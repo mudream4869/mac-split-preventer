@@ -1,6 +1,6 @@
 cask "split-preventer" do
-  version "0.0.0"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  version "0.1.1"
+  sha256 "62cb15f36a68bb6c7b1b5c8e7941645acd17127b12448141327d33f3c71c6226"
 
   url "https://github.com/mudream4869/mac-split-preventer/releases/download/v#{version}/SplitPreventer-#{version}.zip"
   name "SplitPreventer"
