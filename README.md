@@ -4,6 +4,14 @@
 
 > PoC 階段。目前只在 macOS 26.6.2（25G83）上測試過。
 
+## 目前效果
+
+使用前請先了解，目前效果有限：
+
+- 合併成 Split View 時**不會立刻拆開**。
+- 要等切換到合併後的那個桌面，才會觸發拆開。
+- 拆開過程不太順：其中一個視窗會先變回一般視窗，再重新變成全螢幕。
+
 ## 原理
 
 1. **偵測**：輪詢 SkyLight private API `SLSCopyManagedDisplaySpaces`，`TileLayoutManager.TileSpaces` ≥ 2 即為 Split View。
